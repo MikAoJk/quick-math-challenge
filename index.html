@@ -3,38 +3,209 @@
 <head>
   <meta charset="UTF-8">
   <title>Quick Math Challenge</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
+    html, body {
       background: #282c34;
       color: #fff;
       font-family: 'Segoe UI', sans-serif;
       text-align: center;
       margin: 0;
       padding: 0;
+      min-height: 100vh;
+      box-sizing: border-box;
     }
     h1 {
-      margin-top: 36px;
-      font-size: 2.2em;
+      margin-top: 6vw;
+      font-size: clamp(1.5em, 5vw, 2.3em);
       letter-spacing: 2px;
     }
     #gameContainer {
-      margin: 40px auto;
+      margin: 7vw auto 0 auto;
       background: #21252b;
       border-radius: 14px;
       box-shadow: 0 0 20px #000a;
-      width: 340px;
-      padding: 32px 24px;
+      width: 92vw;
+      max-width: 370px;
+      padding: 8vw 5vw;
+      box-sizing: border-box;
     }
     #question {
-      font-size: 1.7em;
+      font-size: clamp(1.3em, 4vw, 1.7em);
       margin: 20px 0 16px 0;
+      word-break: break-word;
     }
     .answer-btn {
+      display: block;
+      width: 100%;
+      max-width: 250px;
+      margin: 10px auto;
       background: #61dafb;
       color: #222;
       border: none;
       border-radius: 8px;
-      padding: 10px 32px;
+      padding: 12px 0;
+      font-size: 1.15em;
+      cursor: pointer;
+      transition: background 0.18s;
+      outline: none;
+      box-sizing: border-box;
+      touch-action: manipulation;
+    }
+    .answer-btn:hover, .answer-btn:focus {
+      background: #21a1f3;
+      color: #fff;
+    }
+    #score, #timer, #feedback {
+      margin: 16px 0 0 0;
+      font-size: 1.15em;
+    }
+    #startBtn {
+      margin-top: 16px;
+      background: #43e97b;
+      color: #222;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 0;
+      width: 100%;
+      max-width: 250px;
+      font-size: 1.15em;
+      cursor: pointer;
+      transition: background 0.18s;
+      box-sizing: border-box;
+      touch-action: manipulation;
+    }
+    #startBtn:hover, #startBtn:focus {
+      background: #38b871;
+      color: #fff;
+    }
+    @media (max-width: 400px) {
+      #gameContainer {
+        padding: 6vw 2vw;
+      }
+      h1 {
+        margin-top: 4vw;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>🧮 Quick Math Challenge</h1>
+  <div id="gameContainer">
+    <div id="score">Score: 0</div>
+    <div id="timer">Time Left: 30s</div>
+    <div id="question">Press "Start Game"!</div>
+    <div id="answers"></div>
+    <div id="feedback"></div>
+    <button id="startBtn">Start Game</button>
+  </div>
+
+  <script>
+    const startBtn = document.getElementById('startBtn');
+    const questionDiv = document.getElementById('question');
+    const answersDiv = document.getElementById('answers');
+    const scoreDiv = document.getElementById('score');
+    const timerDiv = document.getElementById('timer');
+    const feedbackDiv = document.getElementById('feedback');
+    let score = 0, timer = 30, correctAnswer, timerInterval, gameActive = false;
+
+    function randomInt(a, b) {
+      return Math.floor(Math.random() * (b - a + 1)) + a;
+    }
+
+    function generateQuestion() {
+      // Randomly pick question type
+      const types = [
+        () => { // Addition
+          let x = randomInt(1, 20), y = randomInt(1, 20);
+          correctAnswer = x + y;
+          return [`${x} + ${y} = ?`, correctAnswer];
+        },
+        () => { // Subtraction
+          let x = randomInt(10, 30), y = randomInt(1, 10);
+          correctAnswer = x - y;
+          return [`${x} - ${y} = ?`, correctAnswer];
+        },
+        () => { // Multiplication
+          let x = randomInt(2, 12), y = randomInt(2, 10);
+          correctAnswer = x * y;
+          return [`${x} × ${y} = ?`, correctAnswer];
+        }
+      ];
+      const type = types[randomInt(0, types.length - 1)];
+      return type();
+    }
+
+    function setAnswers(correct) {
+      answersDiv.innerHTML = '';
+      let choices = [correct];
+      while (choices.length < 4) {
+        let n = correct + randomInt(-10, 10);
+        if (!choices.includes(n) && n >= 0) choices.push(n);
+      }
+      // Shuffle choices
+      choices = choices.sort(() => Math.random() - 0.5);
+      choices.forEach(ans => {
+        const btn = document.createElement('button');
+        btn.className = 'answer-btn';
+        btn.textContent = ans;
+        btn.onclick = () => checkAnswer(ans);
+        answersDiv.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(ans) {
+      if (!gameActive) return;
+      if (ans === correctAnswer) {
+        score++;
+        feedbackDiv.textContent = "✅ Correct!";
+      } else {
+        feedbackDiv.textContent = "❌ Wrong!";
+      }
+      scoreDiv.textContent = `Score: ${score}`;
+      setTimeout(() => {
+        feedbackDiv.textContent = "";
+        nextQuestion();
+      }, 700);
+    }
+
+    function nextQuestion() {
+      const [q, correct] = generateQuestion();
+      questionDiv.textContent = q;
+      correctAnswer = correct;
+      setAnswers(correctAnswer);
+    }
+
+    function startGame() {
+      score = 0;
+      timer = 30;
+      scoreDiv.textContent = "Score: 0";
+      timerDiv.textContent = `Time Left: ${timer}s`;
+      gameActive = true;
+      startBtn.style.display = "none";
+      feedbackDiv.textContent = "";
+      nextQuestion();
+      timerInterval = setInterval(() => {
+        timer--;
+        timerDiv.textContent = `Time Left: ${timer}s`;
+        if (timer <= 0) endGame();
+      }, 1000);
+    }
+
+    function endGame() {
+      clearInterval(timerInterval);
+      gameActive = false;
+      questionDiv.textContent = "Game Over!";
+      answersDiv.innerHTML = "";
+      feedbackDiv.textContent = `🏆 Final Score: ${score}`;
+      startBtn.textContent = "Play Again";
+      startBtn.style.display = "inline-block";
+    }
+
+    startBtn.onclick = startGame;
+  </script>
+</body>
+</html>      padding: 10px 32px;
       font-size: 1.1em;
       margin: 8px;
       cursor: pointer;
